@@ -19,7 +19,7 @@ U 1 1 5B543D39
 P 10150 5650
 F 0 "J3" H 10100 6467 50  0000 C CNN
 F 1 "Micro_SD_Card_Det_Hirose_DM3AT" H 10100 6376 50  0000 C CNN
-F 2 "KUT_Connector:microSD_DM3AT-SFPEJ" H 12200 6350 50  0001 C CNN
+F 2 "Connectors_Hirose:microSD_Card_Receptacle_Hirose_DM3AT-SF-PEJM5" H 12200 6350 50  0001 C CNN
 F 3 "https://www.hirose.com/product/en/download_file/key_name/DM3/category/Catalog/doc_file_id/49662/?file_category_id=4&item_id=195&is_series=1" H 10150 5750 50  0001 C CNN
 	1    10150 5650
 	1    0    0    -1  
@@ -1187,7 +1187,7 @@ U 1 1 5B543CE1
 P 5950 3750
 F 0 "U1" H 6150 2000 50  0000 C CNN
 F 1 "STM32L431RBTx" H 6400 1900 50  0000 C CNN
-F 2 "Package_QFP:LQFP-64_10x10mm_P0.5mm" H 5350 2050 50  0001 R CNN
+F 2 "Housings_QFP:LQFP-64_10x10mm_Pitch0.5mm" H 5350 2050 50  0001 R CNN
 F 3 "http://www.st.com/st-web-ui/static/active/en/resource/technical/document/datasheet/DM00257211.pdf" H 5950 3750 50  0001 C CNN
 	1    5950 3750
 	1    0    0    -1  
