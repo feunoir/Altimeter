@@ -24,3 +24,4 @@ _autosave-*
 # Exported BOM files
 *.xml
 *.csv
+Board/Altimeter/lib/3dmodel/DF11-6DP-2DSA.stp
