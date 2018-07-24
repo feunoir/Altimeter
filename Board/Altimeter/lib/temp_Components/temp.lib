@@ -1,0 +1,27 @@
+EESchema-LIBRARY Version 2.4
+#encoding utf-8
+#
+# SW_Push_Tact_4Pin
+#
+DEF SW_Push_Tact_4Pin SW 0 40 Y N 1 F N
+F0 "SW" 50 100 50 H V L CNN
+F1 "SW_Push_Tact_4Pin" 0 -270 50 H V C CNN
+F2 "" 0 200 50 H I C CNN
+F3 "" 0 200 50 H I C CNN
+DRAW
+C 0 -160 15 0 1 0 N
+C 0 -40 15 0 1 0 N
+S -100 0 100 0 0 1 0 N
+S -35 -100 -65 -100 0 1 0 N
+S -35 -25 -35 -175 0 1 0 N
+S 0 -175 0 -200 0 1 0 N
+S 0 0 0 -25 0 1 0 N
+S 100 -200 -100 -200 0 1 0 N
+X 1 1 -200 0 100 R 50 50 0 1 P
+X 2 2 200 0 100 L 50 50 0 1 P
+X 3 3 -200 -200 100 R 50 50 0 1 P
+X 4 4 200 -200 100 L 50 50 0 1 P
+ENDDRAW
+ENDDEF
+#
+#End Library

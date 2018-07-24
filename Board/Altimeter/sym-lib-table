@@ -1,0 +1,12 @@
+(sym_lib_table
+  (lib (name KUT_AnalogDevice)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_AnalogDevice.lib)(options "")(descr ""))
+  (lib (name KUT_CommIC)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_CommIC.lib)(options "")(descr ""))
+  (lib (name KUT_Connector)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_Connector.lib)(options "")(descr ""))
+  (lib (name KUT_Device)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_Device.lib)(options "")(descr ""))
+  (lib (name KUT_DriveIC)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_DriveIC.lib)(options "")(descr ""))
+  (lib (name KUT_PowerIC)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_PowerIC.lib)(options "")(descr ""))
+  (lib (name KUT_Sensor)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_Sensor.lib)(options "")(descr ""))
+  (lib (name KUT_Switch)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_Switch.lib)(options "")(descr ""))
+  (lib (name KUT_uController)(type Legacy)(uri ${KIPRJMOD}/lib/LIB_Components/KUT_uController.lib)(options "")(descr ""))
+  (lib (name temp)(type Legacy)(uri C:/Users/feunoir/Documents/GitHub/General/2018-07_GS-6/Altimeter/Board/Altimeter/lib/temp_Components/temp.lib)(options "")(descr ""))
+)
