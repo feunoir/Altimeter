@@ -388,8 +388,6 @@ Wire Wire Line
 	10800 2600 10700 2600
 Wire Wire Line
 	10000 2600 9700 2600
-NoConn ~ 6550 4250
-NoConn ~ 6550 4150
 NoConn ~ 6550 3950
 NoConn ~ 6550 3650
 NoConn ~ 6550 2750
@@ -397,7 +395,6 @@ NoConn ~ 6550 2650
 NoConn ~ 6550 2550
 NoConn ~ 6550 2250
 NoConn ~ 6550 2150
-NoConn ~ 5250 3450
 NoConn ~ 5250 3850
 NoConn ~ 5250 3950
 NoConn ~ 5250 4050
@@ -682,7 +679,6 @@ Wire Wire Line
 Wire Wire Line
 	3050 6850 3050 6750
 Connection ~ 3050 6750
-NoConn ~ 2950 6950
 $Comp
 L power:GND #PWR0125
 U 1 1 5B5F622E
@@ -1914,4 +1910,24 @@ Connection ~ 9600 3900
 Wire Wire Line
 	9850 4000 10200 4000
 Connection ~ 9850 4000
+$Comp
+L power:GND #PWR0148
+U 1 1 5B858395
+P 4850 3600
+F 0 "#PWR0148" H 4850 3350 50  0001 C CNN
+F 1 "GND" H 4855 3427 50  0000 C CNN
+F 2 "" H 4850 3600 50  0001 C CNN
+F 3 "" H 4850 3600 50  0001 C CNN
+	1    4850 3600
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5250 3450 4850 3450
+Wire Wire Line
+	4850 3450 4850 3600
+Text Label 6550 4150 0    50   ~ 0
+LPS22HB_INT
+Text Label 2950 6950 0    50   ~ 0
+LPS22HB_INT
+NoConn ~ 6550 4250
 $EndSCHEMATC
