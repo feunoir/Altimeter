@@ -24,4 +24,13 @@ _autosave-*
 # Exported BOM files
 *.xml
 *.csv
-Board/Altimeter/lib/3dmodel/DF11-6DP-2DSA.stp
+
+/Board/Altimeter/lib/3dmodel/DF11-6DP-2DSA.stp
+/Board/Altimeter/lib/3dmodel/DF3-2P-2DSA.stp
+/Board/Altimeter/lib/3dmodel/DF3-4P-2DSA.stp
+/Board/Altimeter/lib/3dmodel/DF3-5P-2DSA.stp
+/Board/Altimeter/lib/3dmodel/DM3AT-SF-PEJM5.stp
+/Board/Altimeter/Altimeter.step
+
+/.metadata/
+/Firmware/.metadata/
