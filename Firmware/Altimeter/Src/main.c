@@ -52,7 +52,10 @@
 #include "fatfs.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "LPS22HB.h"
+#include "uart_rx_dma.h"
+#include "../uart_wrapper/uart_wrapper.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -69,7 +72,10 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+char dir_syslog[20] = "SYSLOG.TXT";
+char dir_datlog[20] = "DATLOG.CSV";
 
+LPS22HB_t lps22hb;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -84,6 +90,9 @@ static void MX_TIM2_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+void System_Init(void);
+void System_Config_FileDirectory(void);
+int System_Check_BootCount(void);
 
 /* USER CODE END PFP */
 
@@ -128,6 +137,8 @@ int main(void)
   MX_FATFS_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+
+  System_Init();
 
   /* USER CODE END 2 */
 
@@ -396,6 +407,100 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void System_Init(void) {
+
+	//	start timer for time record
+	HAL_TIM_Base_Start(&htim2);
+
+	//	Configure log file directory
+	System_Config_FileDirectory();
+
+	//	initialize LPS22HB
+	LPS22HB_Set_Handle(&lps22hb, &hi2c1);
+	LPS22HB_Set_Address(&lps22hb, LPS22HB_ADDR_L);
+	LPS22HB_Init(&lps22hb, LPS22HB_ODR_75HZ);
+	LPS22HB_Set_FIFO(&lps22hb, LPS22HB_FIFO_ENABLE, LPS22HB_FIFOMODE_STREAM);
+}
+
+void System_Config_FileDirectory(void)
+{
+	int bootcount;
+	char logdir[8];
+
+	bootcount = System_Check_BootCount();
+	if ( bootcount < 0 ) {
+		xprintf("bootcount check failure!\n");
+
+		sprintf(logdir, "LOG");
+		xprintf("log directory was set to \"LOG\" \n");
+	} else {
+		xprintf("bootcount is %d\n", bootcount);
+
+		sprintf(logdir, "LOG_%03d", bootcount);
+		xprintf("log directory was set to \"LOG_%03d\"\n", bootcount);
+	}
+
+	f_mkdir(logdir);
+
+	sprintf(dir_syslog, "LOG_%03d/SYSLOG.TXT", bootcount);
+	sprintf(dir_datlog, "LOG_%03d/DATLOG.CSV", bootcount);
+}
+
+/**
+ * 	Check system boot count from config file in sdcard
+ */
+int System_Check_BootCount(void)
+{
+    FIL fileRead;
+    FIL fileWrite;
+    FRESULT res;
+
+    char buff[3] = {};
+    int bootcount = 0;
+
+
+    res = f_open(&fileRead, "CONFIG/BOOTCNT.TXT", FA_READ );
+    if ( FR_OK != res ) {
+
+    	//	nothing file
+    	res = f_mkdir("CONFIG");
+
+    	if ( FR_OK == res || FR_EXIST == res ) {
+
+        	//	completed make the directory or exist
+        	res = f_open(&fileWrite, "CONFIG/BOOTCNT.TXT", FA_CREATE_ALWAYS | FA_WRITE );
+
+        	if ( FR_OK != res ) {
+
+        		//	failed to make file
+        		xprintf("filesystem error!\n");
+
+            	return -1;
+        	} else {
+
+        		//	succeed to make file
+        		f_printf(&fileWrite, "%d", bootcount);  //  bootcount = 0
+        	}
+        }
+    } else {
+
+    	//	"BOOTCNT.TXT" file exist
+        f_gets((TCHAR *)buff, 4	, &fileRead);
+        bootcount = atoi(buff);
+        bootcount++;
+
+        f_close(&fileRead);
+
+        res = f_open(&fileWrite, "CONFIG/BOOTCNT.TXT", FA_CREATE_ALWAYS | FA_WRITE );
+    }
+
+    f_printf(&fileWrite, "%d", bootcount);
+    f_close(&fileWrite);
+
+    return bootcount;
+}
+
+
 
 /* USER CODE END 4 */
 
