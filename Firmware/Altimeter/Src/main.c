@@ -64,6 +64,7 @@ I2C_HandleTypeDef hi2c1;
 SD_HandleTypeDef hsd1;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim6;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -72,8 +73,12 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-char dir_syslog[20] = "SYSLOG.TXT";
-char dir_datlog[20] = "DATLOG.CSV";
+FATFS fatfs;
+FIL file_Baro, file_GNSS;
+
+//char logdir_Sys[20] = "SYSLOG.TXT";
+char logdir_Baro[20] = "BAROLOG.CSV";
+char logdir_GNSS[20] = "GNSSLOG.CSV";
 
 LPS22HB_t lps22hb;
 /* USER CODE END PV */
@@ -87,17 +92,25 @@ static void MX_SDMMC1_SD_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM6_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void System_Init(void);
 void System_Config_FileDirectory(void);
 int System_Check_BootCount(void);
+void Inst_Log_Barometer(void);
+void Inst_Log_GNSS(void);
+void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms);
 
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
+typedef struct {
+	uint32_t tim;
+	uint32_t press;
+	int16_t temp;
+} EnvData_Container_t;
 /* USER CODE END 0 */
 
 /**
@@ -136,6 +149,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_FATFS_Init();
   MX_TIM2_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
   System_Init();
@@ -315,6 +329,31 @@ static void MX_TIM2_Init(void)
 
 }
 
+/* TIM6 init function */
+static void MX_TIM6_Init(void)
+{
+
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 19338;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 1765;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
@@ -407,19 +446,76 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 void System_Init(void) {
+	FRESULT fRes;
 
 	//	start timer for time record
 	HAL_TIM_Base_Start(&htim2);
 
-	//	Configure log file directory
-	System_Config_FileDirectory();
+	uart_init(&huart2);
 
 	//	initialize LPS22HB
 	LPS22HB_Set_Handle(&lps22hb, &hi2c1);
 	LPS22HB_Set_Address(&lps22hb, LPS22HB_ADDR_L);
 	LPS22HB_Init(&lps22hb, LPS22HB_ODR_75HZ);
 	LPS22HB_Set_FIFO(&lps22hb, LPS22HB_FIFO_ENABLE, LPS22HB_FIFOMODE_STREAM);
+
+	//	mount sd card
+	fRes = f_mount(&fatfs, SDPath, 1);
+	if(fRes == FR_OK) {
+		//	ok
+		LED_Flash_OnePulse(LED_BLUE_GPIO_Port, LED_BLUE_Pin, 500);
+		xprintf("[FatFs] mount succees\r\n");
+	} else {
+		//	fail Å® reset
+		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
+		xprintf("[FatFs] mount failure\r\n");
+		NVIC_SystemReset();
+	}
+
+	//	Configure log file directory
+	System_Config_FileDirectory();
+
+	//	open file for baro/temp logging
+	fRes = f_open(&file_Baro, logdir_Baro, FA_OPEN_APPEND | FA_WRITE);
+	if(fRes == FR_OK) {
+		//	ok
+		LED_Flash_OnePulse(LED_GREEN_GPIO_Port, LED_GREEN_Pin, 500);
+		xprintf("[FatFs] baro fopen succees\r\n");
+	} else {
+		//	fail Å® reset
+		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
+		xprintf("[FatFs] baro fopen failure\r\n");
+		NVIC_SystemReset();
+	}
+
+	//	open file for baro/temp logging
+	fRes = f_open(&file_GNSS, logdir_GNSS, FA_OPEN_APPEND | FA_WRITE);
+	if(fRes == FR_OK) {
+		//	ok
+		LED_Flash_OnePulse(LED_GREEN_GPIO_Port, LED_GREEN_Pin, 500);
+		xprintf("[FatFs] gnss fopen succees\r\n");
+	} else {
+		//	fail Å® reset
+		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
+		xprintf("[FatFs] gnss fopen failure\r\n");
+		NVIC_SystemReset();
+	}
+
+	/* These uart interrupts halt any ongoing transfer if an error occurs, disable them */
+	/* Disable the UART Parity Error Interrupt */
+	__HAL_UART_DISABLE_IT(&huart1, UART_IT_PE);
+	/* Disable the UART Error Interrupt: (Frame error, noise error, overrun error) */
+	__HAL_UART_DISABLE_IT(&huart1, UART_IT_ERR);
+
+	//	uart rx dma config
+	msgrx_init(&huart1);
+
+	//	start interrupt timer for reading barometer
+	HAL_TIM_Base_Start_IT(&htim6);
+	//HAL_TIM_Base_Start_IT(&htim7);
+
 }
 
 void System_Config_FileDirectory(void)
@@ -429,21 +525,22 @@ void System_Config_FileDirectory(void)
 
 	bootcount = System_Check_BootCount();
 	if ( bootcount < 0 ) {
-		xprintf("bootcount check failure!\n");
+		xprintf("[LogSys]bootcount check failure!\r\n");
 
 		sprintf(logdir, "LOG");
-		xprintf("log directory was set to \"LOG\" \n");
+		xprintf("[LogSys]log directory was set to \"LOG\" \r\n");
 	} else {
-		xprintf("bootcount is %d\n", bootcount);
+		xprintf("[LogSys]bootcount is %d\r\n", bootcount);
 
 		sprintf(logdir, "LOG_%03d", bootcount);
-		xprintf("log directory was set to \"LOG_%03d\"\n", bootcount);
+		xprintf("[LogSys]log directory was set to \"LOG_%03d\"\r\n", bootcount);
 	}
 
 	f_mkdir(logdir);
 
-	sprintf(dir_syslog, "LOG_%03d/SYSLOG.TXT", bootcount);
-	sprintf(dir_datlog, "LOG_%03d/DATLOG.CSV", bootcount);
+	//sprintf(logdir_Sys, "LOG_%03d/SYSLOG.TXT", bootcount);
+	sprintf(logdir_Baro, "LOG_%03d/BAROLOG.CSV", bootcount);
+	sprintf(logdir_GNSS, "LOG_%03d/GNSSLOG.CSV", bootcount);
 }
 
 /**
@@ -473,7 +570,7 @@ int System_Check_BootCount(void)
         	if ( FR_OK != res ) {
 
         		//	failed to make file
-        		xprintf("filesystem error!\n");
+        		xprintf("filesystem error!\r\n");
 
             	return -1;
         	} else {
@@ -500,8 +597,84 @@ int System_Check_BootCount(void)
     return bootcount;
 }
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+	if(htim->Instance == TIM6) {
+		Inst_Log_Barometer();
+		Inst_Log_GNSS();
+		//f_sync(&file_GNSS);
+	}
+	/*
+	if(htim->Instance == TIM7) {
+		Inst_Log_GNSS();
+	}*/
+}
 
+void Inst_Log_Barometer(void) {
+	int i;
+	char buff[64];
+	EnvData_Container_t sensdata[32];
+	uint32_t time_stamp;
 
+	for(i = 0; i < 32; i++) {
+
+		time_stamp = TIM2->CNT;
+		LPS22HB_Update_Data(&lps22hb);	//	FIFO whole read
+		sensdata[i].tim = time_stamp - 1000000 * (31 - i) / 75;			//	time record of data
+		sensdata[i].press = LPS22HB_Get_PressureRaw(&lps22hb);
+		sensdata[i].temp = LPS22HB_Get_TemperatureRaw(&lps22hb);
+		sprintf(buff,"%d,%lu,%lu,%d\r\n",
+			  i,					//	data number of one cycle
+			  sensdata[i].tim,
+			  sensdata[i].press,
+			  sensdata[i].temp
+		);
+		f_puts(buff, &file_Baro);
+		xputs(buff);
+	}
+	PIN_H(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+	f_sync(&file_Baro);
+	PIN_L(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+}
+
+void Inst_Log_GNSS(void) {
+	char c[1];
+
+	/*
+	uint8_t i = 0;
+	char sentence[128];
+	char output_buf[128];
+	*/
+
+	f_printf(&file_GNSS, "%lu\r\n", TIM2->CNT);
+
+	while(!msgrx_circ_buf_is_empty()) {
+		c[0] = msgrx_circ_buf_get();
+		xputs(c);
+		f_putc(c[0], &file_GNSS);
+
+		/*
+		sentence[i] = msgrx_circ_buf_get();
+		if(sentence[i] == '\n') {
+			time_stamp = TIM2->CNT;
+			sprintf(output_buf, "%lu,", time_stamp);
+			strncat(output_buf, sentence, strlen(sentence));
+			xputs(output_buf);
+			f_puts(output_buf, &file_GNSS);
+			i = 0;
+		} else {
+			i++;
+		}*/
+	}
+	PIN_H(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
+	f_sync(&file_GNSS);
+	PIN_L(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
+}
+
+void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms) {
+	HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
+	HAL_Delay(span_ms);
+	HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
+}
 /* USER CODE END 4 */
 
 /**

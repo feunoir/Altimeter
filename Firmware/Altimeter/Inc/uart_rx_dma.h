@@ -16,7 +16,7 @@
 * The STM32 makes receiving chars into a large circular buffer simple
 * and requires no CPU time. The UART receiver DMA must be setup as CIRCULAR.
 */
-#define CIRC_BUF_SZ       1024  /* must be power of two */
+#define CIRC_BUF_SZ       512  /* must be power of two */
 #define DMA_WRITE_PTR ( (CIRC_BUF_SZ - huart_cobs->hdmarx->Instance->CNDTR) & (CIRC_BUF_SZ - 1) )
 
 
