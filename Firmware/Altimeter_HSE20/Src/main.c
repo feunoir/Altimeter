@@ -93,7 +93,6 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM6_Init(void);
-static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -151,9 +150,6 @@ int main(void)
   MX_FATFS_Init();
   MX_TIM2_Init();
   MX_TIM6_Init();
-
-  /* Initialize interrupts */
-  MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
   System_Init();
@@ -250,17 +246,6 @@ void SystemClock_Config(void)
 
   /* SysTick_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
-}
-
-/**
-  * @brief NVIC Configuration.
-  * @retval None
-  */
-static void MX_NVIC_Init(void)
-{
-  /* EXTI9_5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 }
 
 /* I2C1 init function */
@@ -461,11 +446,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : TRIGPIN_EXTI_Pin */
-  GPIO_InitStruct.Pin = TRIGPIN_EXTI_Pin;
+  /*Configure GPIO pin : LAUNCHDETECT_EXTI_Pin */
+  GPIO_InitStruct.Pin = LAUNCHDETECT_EXTI_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(TRIGPIN_EXTI_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(LAUNCHDETECT_EXTI_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA10 PA11 */
   GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
@@ -628,8 +613,8 @@ int System_Check_BootCount(void)
     return bootcount;
 }
 
-void HAL_GPIO_EXTI_Callback(uint16 GPIO_Pin) {
-	if(GPIO_Pin == TRIGPIN_EXTI_Pin) {
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if(GPIO_Pin == LAUNCHDETECT_EXTI_Pin) {
 		Inst_Log_Barometer();
 		Inst_Log_GNSS();
 		HAL_TIM_Base_Start_IT(&htim6);
