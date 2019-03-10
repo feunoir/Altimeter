@@ -28,23 +28,17 @@ void Rocket_AddQueue(Rocket_Info_t info) {
 }
 
 void Rocket_UpdateStatus_Launched(Rocket_Info_t info) {
-	//info.isLaunched = 1;
 	Rocket_SetStatus(info, ROCKET_LAUNCHED);
 }
 void Rocket_UpdateStatus_AllowDeploy(Rocket_Info_t info) {
-	//info.isAllowedDeploy = 1;
 	Rocket_SetStatus(info, ROCKET_ALLOWEDDEPLOY);
 }
 void Rocket_UpdateStatus_ReachedApogee(Rocket_Info_t info) {
-	/*if(info.isAllowedDeploy = 1) {
-		info.isReachedApogee = 1;
-	}*/
 	if(Rocket_isAllowedDeploy(info) == ROCKET_ALLOWEDDEPLOY) {
 		Rocket_SetStatus(info, ROCKET_REACHEDAPOGEE);
 	}
 }
 void Rocket_UpdateStatus_DeployTimerElapsed(Rocket_Info_t info) {
-	//info.isDeployTimerElapsed = 1;
 	Rocket_SetStatus(info, ROCKET_DEPLOYTIMERELAPSED);
 }
 
