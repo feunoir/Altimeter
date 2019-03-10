@@ -52,6 +52,7 @@
 #include "fatfs.h"
 
 /* USER CODE BEGIN Includes */
+#include "rocket.h"
 #include "LPS22HB.h"
 #include "uart_rx_dma.h"
 #include "../uart_wrapper/uart_wrapper.h"
@@ -65,6 +66,8 @@ SD_HandleTypeDef hsd1;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
+TIM_HandleTypeDef htim15;
+TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -93,24 +96,52 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM6_Init(void);
+static void MX_TIM16_Init(void);
+static void MX_TIM15_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void System_Init(void);
 void System_Config_FileDirectory(void);
 int System_Check_BootCount(void);
-void Inst_Log_Barometer(void);
+void Inst_Log_Barometer(Rocket_Info_t info);
 void Inst_Log_GNSS(void);
 void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms);
 
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-typedef struct {
+
+Rocket_Info_t rocket_info;
+
+/*typedef struct {
 	uint32_t tim;
 	uint32_t press;
 	int16_t temp;
 } EnvData_Container_t;
+
+typedef struct {
+	EnvData_Container_t envdata[32];
+} EnvData_DataSet_t;
+
+typedef struct {
+	EnvData_DataSet_t packet[4];
+	bool isLaunched = false;
+	bool isDeployAllowed = false;
+	bool isReachedApogee = false;
+	bool isDeployTimerElapsed = false;
+	bool initiateDeploy = false;
+} Rocket_Info_t;
+
+Rocket_Info_t rocket_info;
+
+void Rocket_UpdateStatus_Launched(Rocket_Info_t info);
+void Rocket_UpdateStatus_AllowDeploy(Rocket_Info_t info);
+void Rocket_UpdateStatus_ReachedApogee(Rocket_Info_t info);
+void Rocket_UpdateStatus_DeployTimerElapsed(Rocket_Info_t info);
+
+*/
+
 /* USER CODE END 0 */
 
 /**
@@ -150,6 +181,8 @@ int main(void)
   MX_FATFS_Init();
   MX_TIM2_Init();
   MX_TIM6_Init();
+  MX_TIM16_Init();
+  MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
 
   System_Init();
@@ -165,6 +198,12 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 
+	  Rocket_Evaluate_AbleToDeploy(rocket_info);
+	  if(Rocket_isAbleToDeploy(rocket_info)) {
+		  //HAL_GPIO_WritePin(GPIOA,GPIO_PIN_10,GPIO_PIN_SET);
+	  } else {
+		  //HAL_GPIO_WritePin(GPIOA,GPIO_PIN_10,GPIO_PIN_RESET);
+	  }
   }
   /* USER CODE END 3 */
 
@@ -354,6 +393,58 @@ static void MX_TIM6_Init(void)
 
 }
 
+/* TIM15 init function */
+static void MX_TIM15_Init(void)
+{
+
+  TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim15.Instance = TIM15;
+  htim15.Init.Prescaler = 39;
+  htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim15.Init.Period = 32000;
+  htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim15.Init.RepetitionCounter = 0;
+  htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim15) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim15, &sClockSourceConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* TIM16 init function */
+static void MX_TIM16_Init(void)
+{
+
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 39999;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 18000;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
@@ -529,7 +620,8 @@ void System_Init(void) {
 	msgrx_init(&huart1);
 
 	//	start interrupt timer for reading barometer
-	//HAL_TIM_Base_Start_IT(&htim6);
+	HAL_TIM_Base_Start_IT(&htim6);
+	//	for only gnss (not for use now)
 	//HAL_TIM_Base_Start_IT(&htim7);
 
 }
@@ -614,16 +706,23 @@ int System_Check_BootCount(void)
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+
+	//	打ち上げ検知時動作
 	if(GPIO_Pin == LAUNCHDETECT_EXTI_Pin) {
-		Inst_Log_Barometer();
-		Inst_Log_GNSS();
-		HAL_TIM_Base_Start_IT(&htim6);
+		//	フラグ更新→打ち上げした
+		Rocket_UpdateStatus_Launched(rocket_info);
+
+
+		//	開放タイマースタート
+		HAL_TIM_Base_Start_IT(&htim15);
+		//	開放ロックタイマースタート
+		HAL_TIM_Base_Start_IT(&htim16);
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if(htim->Instance == TIM6) {
-		Inst_Log_Barometer();
+		Inst_Log_Barometer(rocket_info);
 		Inst_Log_GNSS();
 		//f_sync(&file_GNSS);
 	}
@@ -631,9 +730,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if(htim->Instance == TIM7) {
 		Inst_Log_GNSS();
 	}*/
+
+	//開放タイマー
+	if(htim->Instance == TIM15) {
+		Rocket_UpdateStatus_DeployTimerElapsed(rocket_info);
+	}
+
+	//開放ロックタイマー
+	if(htim->Instance == TIM16) {
+		Rocket_UpdateStatus_AllowDeploy(rocket_info);
+	}
 }
 
-void Inst_Log_Barometer(void) {
+/*void Inst_Log_Barometer(void) {
 	int i;
 	char buff[64];
 	EnvData_Container_t sensdata[32];
@@ -658,8 +767,49 @@ void Inst_Log_Barometer(void) {
 	PIN_H(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 	f_sync(&file_Baro);
 	PIN_L(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
-}
+}*/
 
+void Inst_Log_Barometer(Rocket_Info_t info) {
+	int i;
+	char buff[64];
+	EnvData_DataSet_t sensdata;
+	uint32_t time_stamp;
+
+
+	for(i = 0; i < 32; i++) {
+
+		time_stamp = TIM2->CNT;
+		LPS22HB_Update_Data(&lps22hb);	//	FIFO whole read
+		sensdata.envdata[i].tim = time_stamp - 1000000 * (31 - i) / 75;			//	time record of data
+		sensdata.envdata[i].press = LPS22HB_Get_PressureRaw(&lps22hb);
+		sensdata.envdata[i].temp = LPS22HB_Get_TemperatureRaw(&lps22hb);
+		sprintf(buff,"%d,%lu,%lu,%d\r\n",
+			  i,					//	data number of one cycle
+			  sensdata.envdata[i].tim,
+			  sensdata.envdata[i].press,
+			  sensdata.envdata[i].temp
+		);
+		//f_puts(buff, &file_Baro);
+		xputs(buff);
+	}
+
+	Rocket_EnvData_ShiftDataSet(rocket_info);
+	Rocket_EnvData_AddNewDataSet(rocket_info, sensdata);
+
+	// TODO ここにキューの数だけSDに書き込む&キューをリセットする処理追加
+	// TODO isLaunchedがtrueならSD記録、falseなら記録せず
+
+	if(Rocket_isLaunched(rocket_info)) {
+		//書き込む関数
+	} else {
+		//ひたすらなにもせずqueueをためる
+	}
+
+	/*PIN_H(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+	f_sync(&file_Baro);
+	PIN_L(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+	*/
+}
 void Inst_Log_GNSS(void) {
 	char c[1];
 
@@ -699,6 +849,7 @@ void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms) {
 	HAL_Delay(span_ms);
 	HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
 }
+
 /* USER CODE END 4 */
 
 /**
