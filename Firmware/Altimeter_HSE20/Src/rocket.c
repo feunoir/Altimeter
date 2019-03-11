@@ -45,8 +45,13 @@ void Rocket_UpdateStatus_ReachedApogee(Rocket_Info_t info) {
 void Rocket_UpdateStatus_DeployTimerElapsed(Rocket_Info_t info) {
 	Rocket_SetStatus(info, ROCKET_DEPLOYTIMERELAPSED);
 }
+void Rocket_UpdateStatus_ReachedThresholdAlt(Rocket_Info_t info) {
+	if(Rocket_isAbleToDeploy_1stStage(info) == ROCKET_ABLETODEPLOY_1STSTAGE) {
+		Rocket_SetStatus(info, ROCKET_REACHEDTHRESHOLDALT);
+	}
+}
 
-void Rocket_Evaluate_AbleToDeploy(Rocket_Info_t info) {
+void Rocket_Evaluate_AbleToDeploy_1stStage(Rocket_Info_t info) {
 	uint8_t isabletoinitiate =
 			(Rocket_isLaunched(info) == ROCKET_LAUNCHED) &
 			(Rocket_isAllowedDeploy(info) == ROCKET_ALLOWEDDEPLOY) &
@@ -55,11 +60,22 @@ void Rocket_Evaluate_AbleToDeploy(Rocket_Info_t info) {
 				(Rocket_isDeployTimerElapsed(info) == ROCKET_DEPLOYTIMERELAPSED)
 			);
 	if(isabletoinitiate) {
-		Rocket_SetStatus(info, ROCKET_ABLETODEPLOY);
+		Rocket_SetStatus(info, ROCKET_ABLETODEPLOY_1STSTAGE);
 	} else {
-		Rocket_ResetStatus(info, ROCKET_ABLETODEPLOY);
+		Rocket_ResetStatus(info, ROCKET_ABLETODEPLOY_1STSTAGE);
 	}
 
+}
+
+void Rocket_Evaluate_AbleToDeploy_2ndStage(Rocket_Info_t info) {
+	uint8_t isabletoinitiate =
+			(Rocket_isAbleToDeploy_1stStage(info) == ROCKET_ABLETODEPLOY_1STSTAGE) &
+			(Rocket_isReachedThresholdAlt(info) == ROCKET_REACHEDTHRESHOLDALT);
+	if(isabletoinitiate) {
+		Rocket_SetStatus(info, ROCKET_ABLETODEPLOY_2NDSTAGE);
+	} else {
+		Rocket_ResetStatus(info, ROCKET_ABLETODEPLOY_2NDSTAGE);
+	}
 }
 
 Rocket_Status_t Rocket_isLaunched(Rocket_Info_t info) {
@@ -78,8 +94,14 @@ Rocket_Status_t Rocket_isDeployTimerElapsed(Rocket_Info_t info) {
 	return Rocket_ReadStatus(info, ROCKET_DEPLOYTIMERELAPSED);
 }
 
-Rocket_Status_t Rocket_isAbleToDeploy(Rocket_Info_t info) {
-	return Rocket_ReadStatus(info, ROCKET_ABLETODEPLOY);
+Rocket_Status_t Rocket_isAbleToDeploy_1stStage(Rocket_Info_t info) {
+	return Rocket_ReadStatus(info, ROCKET_ABLETODEPLOY_1STSTAGE);
+}
+Rocket_Status_t Rocket_isReachedThresholdAlt(Rocket_Info_t info) {
+	return Rocket_ReadStatus(info, ROCKET_REACHEDTHRESHOLDALT);
+}
+Rocket_Status_t Rocket_isAbleToDeploy_2ndStage(Rocket_Info_t info) {
+	return Rocket_ReadStatus(info, ROCKET_ABLETODEPLOY_2NDSTAGE);
 }
 
 uint8_t Rocket_ReadStatus(Rocket_Info_t info, Rocket_Status_t selector) {

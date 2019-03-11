@@ -199,11 +199,19 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 
-	  Rocket_Evaluate_AbleToDeploy(rocket_info);
-	  if(Rocket_isAbleToDeploy(rocket_info)) {
-		  //PIN_H(GPIOA, GPIO_PIN_10);
+
+	  Rocket_Evaluate_AbleToDeploy_1stStage(rocket_info);
+	  if(Rocket_isAbleToDeploy_1stStage(rocket_info)) {
+		  PIN_H(TRIG_1ST_GPIO_Port, TRIG_1ST_Pin);
+
+		  Rocket_Evaluate_AbleToDeploy_2ndStage(rocket_info);
+		  if(Rocket_isAbleToDeploy_2ndStage(rocket_info)) {
+			  PIN_H(TRIG_2ND_GPIO_Port, TRIG_2ND_Pin);
+		  } else {
+			  PIN_L(TRIG_2ND_GPIO_Port, TRIG_2ND_Pin);
+		  }
 	  } else {
-		  //PIN_L(GPIOA, GPIO_PIN_10);
+		  PIN_L(TRIG_1ST_GPIO_Port, TRIG_1ST_Pin);
 	  }
   }
   /* USER CODE END 3 */
@@ -529,7 +537,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, LED_BLUE_Pin|LED_GREEN_Pin|LED_YELLOW_Pin|LED_RED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10|GPIO_PIN_11, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, TRIG_2ND_Pin|TRIG_1ST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : LED_BLUE_Pin LED_GREEN_Pin LED_YELLOW_Pin LED_RED_Pin */
   GPIO_InitStruct.Pin = LED_BLUE_Pin|LED_GREEN_Pin|LED_YELLOW_Pin|LED_RED_Pin;
@@ -544,8 +552,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(LAUNCHDETECT_EXTI_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA10 PA11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
+  /*Configure GPIO pins : TRIG_2ND_Pin TRIG_1ST_Pin */
+  GPIO_InitStruct.Pin = TRIG_2ND_Pin|TRIG_1ST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

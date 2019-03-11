@@ -16,7 +16,9 @@ typedef enum {
 	ROCKET_ALLOWEDDEPLOY = 0x02,
 	ROCKET_REACHEDAPOGEE = 0x04,
 	ROCKET_DEPLOYTIMERELAPSED = 0x08,
-	ROCKET_ABLETODEPLOY = 0x10
+	ROCKET_ABLETODEPLOY_1STSTAGE = 0x10,
+	ROCKET_REACHEDTHRESHOLDALT = 0x20,
+	ROCKET_ABLETODEPLOY_2NDSTAGE = 0x40
 } Rocket_Status_t;
 
 typedef struct {
@@ -47,14 +49,19 @@ void Rocket_UpdateStatus_Launched(Rocket_Info_t info);
 void Rocket_UpdateStatus_AllowDeploy(Rocket_Info_t info);
 void Rocket_UpdateStatus_ReachedApogee(Rocket_Info_t info);
 void Rocket_UpdateStatus_DeployTimerElapsed(Rocket_Info_t info);
+void Rocket_UpdateStatus_ReachedThresholdAlt(Rocket_Info_t info);
 
-void Rocket_Evaluate_AbleToDeploy(Rocket_Info_t info);
+void Rocket_Evaluate_AbleToDeploy_1stStage(Rocket_Info_t info);
+void Rocket_Evaluate_AbleToDeploy_2ndStage(Rocket_Info_t info);
 
 Rocket_Status_t Rocket_isLaunched(Rocket_Info_t info);
 Rocket_Status_t Rocket_isAllowedDeploy(Rocket_Info_t info);
 Rocket_Status_t Rocket_isReachedApogee(Rocket_Info_t info);
 Rocket_Status_t Rocket_isDeployTimerElapsed(Rocket_Info_t info);
-Rocket_Status_t Rocket_isAbleToDeploy(Rocket_Info_t info);
+Rocket_Status_t Rocket_isAbleToDeploy_1stStage(Rocket_Info_t info);
+Rocket_Status_t Rocket_isReachedThresholdAlt(Rocket_Info_t info);
+Rocket_Status_t Rocket_isAbleToDeploy_2ndStage(Rocket_Info_t info);
+
 
 uint8_t Rocket_ReadStatus(Rocket_Info_t info, Rocket_Status_t selector);
 void Rocket_SetStatus(Rocket_Info_t info, Rocket_Status_t selector);
