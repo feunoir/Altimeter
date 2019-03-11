@@ -39,6 +39,7 @@ void Rocket_Init(Rocket_Info_t info);
 
 void Rocket_InitStatus(Rocket_Info_t info);
 
+uint8_t Rocket_GetQueue(Rocket_Info_t info);
 void Rocket_ResetQueue(Rocket_Info_t info);
 void Rocket_AddQueue(Rocket_Info_t info);
 

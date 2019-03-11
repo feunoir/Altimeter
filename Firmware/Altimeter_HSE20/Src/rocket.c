@@ -15,6 +15,10 @@ void Rocket_InitStatus(Rocket_Info_t info) {
 	info.rocket_status = 0x00;
 }
 
+uint8_t Rocket_GetQueue(Rocket_Info_t info) {
+	return info.sdwrite_queue;
+}
+
 void Rocket_ResetQueue(Rocket_Info_t info) {
 	info.sdwrite_queue = 0;
 }
@@ -99,5 +103,4 @@ void Rocket_EnvData_ShiftDataSet(Rocket_Info_t info) {
 
 void Rocket_EnvData_AddNewDataSet(Rocket_Info_t info, EnvData_DataSet_t data) {
 	info.dataset[0] = data;
-	Rocket_AddQueue(info);
 }

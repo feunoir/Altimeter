@@ -77,11 +77,12 @@ DMA_HandleTypeDef hdma_usart2_tx;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 FATFS fatfs;
-FIL file_Baro, file_GNSS;
+FIL file_Baro;
+//FIL file_GNSS;
 
 //char logdir_Sys[20] = "SYSLOG.TXT";
 char logdir_Baro[20] = "BAROLOG.CSV";
-char logdir_GNSS[20] = "GNSSLOG.CSV";
+//char logdir_GNSS[20] = "GNSSLOG.CSV";
 
 LPS22HB_t lps22hb;
 /* USER CODE END PV */
@@ -105,7 +106,7 @@ void System_Init(void);
 void System_Config_FileDirectory(void);
 int System_Check_BootCount(void);
 void Inst_Log_Barometer(Rocket_Info_t info);
-void Inst_Log_GNSS(void);
+//void Inst_Log_GNSS(void);
 void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms);
 
 /* USER CODE END PFP */
@@ -200,9 +201,9 @@ int main(void)
 
 	  Rocket_Evaluate_AbleToDeploy(rocket_info);
 	  if(Rocket_isAbleToDeploy(rocket_info)) {
-		  //HAL_GPIO_WritePin(GPIOA,GPIO_PIN_10,GPIO_PIN_SET);
+		  //PIN_H(GPIOA, GPIO_PIN_10);
 	  } else {
-		  //HAL_GPIO_WritePin(GPIOA,GPIO_PIN_10,GPIO_PIN_RESET);
+		  //PIN_L(GPIOA, GPIO_PIN_10);
 	  }
   }
   /* USER CODE END 3 */
@@ -597,7 +598,7 @@ void System_Init(void) {
 		NVIC_SystemReset();
 	}
 
-	//	open file for baro/temp logging
+	/*/	open file for gnss logging
 	fRes = f_open(&file_GNSS, logdir_GNSS, FA_OPEN_APPEND | FA_WRITE);
 	if(fRes == FR_OK) {
 		//	ok
@@ -608,7 +609,7 @@ void System_Init(void) {
 		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
 		xprintf("[FatFs] gnss fopen failure\r\n");
 		NVIC_SystemReset();
-	}
+	}*/
 
 	/* These uart interrupts halt any ongoing transfer if an error occurs, disable them */
 	/* Disable the UART Parity Error Interrupt */
@@ -648,7 +649,7 @@ void System_Config_FileDirectory(void)
 
 	//sprintf(logdir_Sys, "LOG_%03d/SYSLOG.TXT", bootcount);
 	sprintf(logdir_Baro, "LOG_%03d/BAROLOG.CSV", bootcount);
-	sprintf(logdir_GNSS, "LOG_%03d/GNSSLOG.CSV", bootcount);
+	//sprintf(logdir_GNSS, "LOG_%03d/GNSSLOG.CSV", bootcount);
 }
 
 /**
@@ -712,6 +713,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		//	フラグ更新→打ち上げした
 		Rocket_UpdateStatus_Launched(rocket_info);
 
+		// TODO launchedフラグ更新した時刻を記録する処理
+
 
 		//	開放タイマースタート
 		HAL_TIM_Base_Start_IT(&htim15);
@@ -723,7 +726,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if(htim->Instance == TIM6) {
 		Inst_Log_Barometer(rocket_info);
-		Inst_Log_GNSS();
+		//Inst_Log_GNSS();
 		//f_sync(&file_GNSS);
 	}
 	/*
@@ -734,11 +737,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	//開放タイマー
 	if(htim->Instance == TIM15) {
 		Rocket_UpdateStatus_DeployTimerElapsed(rocket_info);
+		// TODO deploytimerelapsedフラグ更新した時刻を記録する処理
 	}
 
 	//開放ロックタイマー
 	if(htim->Instance == TIM16) {
 		Rocket_UpdateStatus_AllowDeploy(rocket_info);
+		// TODO allowdeployフラグ更新した時刻を記録する処理
 	}
 }
 
@@ -770,10 +775,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 }*/
 
 void Inst_Log_Barometer(Rocket_Info_t info) {
-	int i;
+	int i,j;
 	char buff[64];
 	EnvData_DataSet_t sensdata;
 	uint32_t time_stamp;
+	uint8_t queue;
 
 
 	for(i = 0; i < 32; i++) {
@@ -795,29 +801,43 @@ void Inst_Log_Barometer(Rocket_Info_t info) {
 
 	Rocket_EnvData_ShiftDataSet(rocket_info);
 	Rocket_EnvData_AddNewDataSet(rocket_info, sensdata);
+	Rocket_AddQueue(rocket_info);
 
 	// TODO ここにキューの数だけSDに書き込む&キューをリセットする処理追加
 	// TODO isLaunchedがtrueならSD記録、falseなら記録せず
 
 	if(Rocket_isLaunched(rocket_info)) {
-		//書き込む関数
+		//	キューの数だけデータセットから過去のセンシングデータを読み出し、SDに書き込む(32個単位で最大128個)
+		queue = Rocket_GetQueue(rocket_info);
+		for(i = 0; i < queue; i++) {
+			for(j = 0; j < 32; j++) {
+				sprintf(buff,"%d,%lu,%lu,%d\r\n",
+						j,					//	data number of one cycle,
+						rocket_info.dataset[i].envdata[j].tim,
+						rocket_info.dataset[i].envdata[j].press,
+						rocket_info.dataset[i].envdata[j].temp
+				);
+				f_puts(buff, &file_Baro);
+			}
+		}
+
+		PIN_H(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+		f_sync(&file_Baro);
+		PIN_L(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+
+		Rocket_ResetQueue(rocket_info);
 	} else {
 		//ひたすらなにもせずqueueをためる
 	}
-
-	/*PIN_H(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
-	f_sync(&file_Baro);
-	PIN_L(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
-	*/
 }
-void Inst_Log_GNSS(void) {
+/*void Inst_Log_GNSS(void) {
 	char c[1];
 
-	/*
+	/　*
 	uint8_t i = 0;
 	char sentence[128];
 	char output_buf[128];
-	*/
+	* /
 
 	f_printf(&file_GNSS, "%lu\r\n", TIM2->CNT);
 
@@ -826,7 +846,7 @@ void Inst_Log_GNSS(void) {
 		xputs(c);
 		f_putc(c[0], &file_GNSS);
 
-		/*
+		/　*
 		sentence[i] = msgrx_circ_buf_get();
 		if(sentence[i] == '\n') {
 			time_stamp = TIM2->CNT;
@@ -837,12 +857,12 @@ void Inst_Log_GNSS(void) {
 			i = 0;
 		} else {
 			i++;
-		}*/
+		}* /
 	}
 	PIN_H(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
 	f_sync(&file_GNSS);
 	PIN_L(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
-}
+}*/
 
 void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms) {
 	HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
