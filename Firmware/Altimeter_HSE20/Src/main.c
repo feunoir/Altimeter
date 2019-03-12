@@ -77,10 +77,11 @@ DMA_HandleTypeDef hdma_usart2_tx;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 FATFS fatfs;
+FIL file_Sys;
 FIL file_Baro;
 //FIL file_GNSS;
 
-//char logdir_Sys[20] = "SYSLOG.TXT";
+char logdir_Sys[20] = "SYSLOG.TXT";
 char logdir_Baro[20] = "BAROLOG.CSV";
 //char logdir_GNSS[20] = "GNSSLOG.CSV";
 
@@ -105,7 +106,7 @@ static void MX_TIM15_Init(void);
 void System_Init(void);
 void System_Config_FileDirectory(void);
 int System_Check_BootCount(void);
-void Inst_Log_Barometer(Rocket_Info_t info);
+void Inst_Log_Barometer(Rocket_Info_t* info);
 //void Inst_Log_GNSS(void);
 void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms);
 
@@ -200,12 +201,12 @@ int main(void)
   /* USER CODE BEGIN 3 */
 
 
-	  Rocket_Evaluate_AbleToDeploy_1stStage(rocket_info);
-	  if(Rocket_isAbleToDeploy_1stStage(rocket_info)) {
+	  Rocket_Evaluate_AbleToDeploy_1stStage(&rocket_info);
+	  if(Rocket_isAbleToDeploy_1stStage(&rocket_info)) {
 		  PIN_H(TRIG_1ST_GPIO_Port, TRIG_1ST_Pin);
 
-		  Rocket_Evaluate_AbleToDeploy_2ndStage(rocket_info);
-		  if(Rocket_isAbleToDeploy_2ndStage(rocket_info)) {
+		  Rocket_Evaluate_AbleToDeploy_2ndStage(&rocket_info);
+		  if(Rocket_isAbleToDeploy_2ndStage(&rocket_info)) {
 			  PIN_H(TRIG_2ND_GPIO_Port, TRIG_2ND_Pin);
 		  } else {
 			  PIN_L(TRIG_2ND_GPIO_Port, TRIG_2ND_Pin);
@@ -571,6 +572,8 @@ void System_Init(void) {
 
 	uart_init(&huart2);
 
+	Rocket_Init(&rocket_info);
+
 	//	initialize LPS22HB
 	LPS22HB_Set_Handle(&lps22hb, &hi2c1);
 	LPS22HB_Set_Address(&lps22hb, LPS22HB_ADDR_L);
@@ -655,7 +658,7 @@ void System_Config_FileDirectory(void)
 
 	f_mkdir(logdir);
 
-	//sprintf(logdir_Sys, "LOG_%03d/SYSLOG.TXT", bootcount);
+	sprintf(logdir_Sys, "LOG_%03d/SYSLOG.TXT", bootcount);
 	sprintf(logdir_Baro, "LOG_%03d/BAROLOG.CSV", bootcount);
 	//sprintf(logdir_GNSS, "LOG_%03d/GNSSLOG.CSV", bootcount);
 }
@@ -719,7 +722,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	//	打ち上げ検知時動作
 	if(GPIO_Pin == LAUNCHDETECT_EXTI_Pin) {
 		//	フラグ更新→打ち上げした
-		Rocket_UpdateStatus_Launched(rocket_info);
+		Rocket_UpdateStatus_Launched(&rocket_info);
 
 		// TODO launchedフラグ更新した時刻を記録する処理
 
@@ -733,7 +736,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if(htim->Instance == TIM6) {
-		Inst_Log_Barometer(rocket_info);
+		Inst_Log_Barometer(&rocket_info);
 		//Inst_Log_GNSS();
 		//f_sync(&file_GNSS);
 	}
@@ -744,13 +747,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
 	//開放タイマー
 	if(htim->Instance == TIM15) {
-		Rocket_UpdateStatus_DeployTimerElapsed(rocket_info);
+		Rocket_UpdateStatus_DeployTimerElapsed(&rocket_info);
 		// TODO deploytimerelapsedフラグ更新した時刻を記録する処理
 	}
 
 	//開放ロックタイマー
 	if(htim->Instance == TIM16) {
-		Rocket_UpdateStatus_AllowDeploy(rocket_info);
+		Rocket_UpdateStatus_AllowDeploy(&rocket_info);
 		// TODO allowdeployフラグ更新した時刻を記録する処理
 	}
 }
@@ -782,7 +785,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	PIN_L(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 }*/
 
-void Inst_Log_Barometer(Rocket_Info_t info) {
+void Inst_Log_Barometer(Rocket_Info_t* info) {
 	int i,j;
 	char buff[64];
 	EnvData_DataSet_t sensdata;
@@ -807,16 +810,16 @@ void Inst_Log_Barometer(Rocket_Info_t info) {
 		xputs(buff);
 	}
 
-	Rocket_EnvData_ShiftDataSet(rocket_info);
-	Rocket_EnvData_AddNewDataSet(rocket_info, sensdata);
-	Rocket_AddQueue(rocket_info);
+	Rocket_EnvData_ShiftDataSet(info);
+	Rocket_EnvData_AddNewDataSet(info, sensdata);
+	Rocket_AddQueue(info);
 
 	// TODO ここにキューの数だけSDに書き込む&キューをリセットする処理追加
 	// TODO isLaunchedがtrueならSD記録、falseなら記録せず
 
-	if(Rocket_isLaunched(rocket_info)) {
+	if(Rocket_isLaunched(info)) {
 		//	キューの数だけデータセットから過去のセンシングデータを読み出し、SDに書き込む(32個単位で最大128個)
-		queue = Rocket_GetQueue(rocket_info);
+		queue = Rocket_GetQueue(info);
 		for(i = 0; i < queue; i++) {
 			for(j = 0; j < 32; j++) {
 				sprintf(buff,"%d,%lu,%lu,%d\r\n",
@@ -833,7 +836,7 @@ void Inst_Log_Barometer(Rocket_Info_t info) {
 		f_sync(&file_Baro);
 		PIN_L(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 
-		Rocket_ResetQueue(rocket_info);
+		Rocket_ResetQueue(info);
 	} else {
 		//ひたすらなにもせずqueueをためる
 	}

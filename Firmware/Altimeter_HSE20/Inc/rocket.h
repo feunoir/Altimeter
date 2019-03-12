@@ -37,37 +37,37 @@ typedef struct {
 	uint8_t sdwrite_queue;
 } Rocket_Info_t;
 
-void Rocket_Init(Rocket_Info_t info);
+void Rocket_Init(Rocket_Info_t* info);
 
-void Rocket_InitStatus(Rocket_Info_t info);
+void Rocket_InitStatus(Rocket_Info_t* info);
 
-uint8_t Rocket_GetQueue(Rocket_Info_t info);
-void Rocket_ResetQueue(Rocket_Info_t info);
-void Rocket_AddQueue(Rocket_Info_t info);
+uint8_t Rocket_GetQueue(Rocket_Info_t* info);
+void Rocket_ResetQueue(Rocket_Info_t* info);
+void Rocket_AddQueue(Rocket_Info_t* info);
 
-void Rocket_UpdateStatus_Launched(Rocket_Info_t info);
-void Rocket_UpdateStatus_AllowDeploy(Rocket_Info_t info);
-void Rocket_UpdateStatus_ReachedApogee(Rocket_Info_t info);
-void Rocket_UpdateStatus_DeployTimerElapsed(Rocket_Info_t info);
-void Rocket_UpdateStatus_ReachedThresholdAlt(Rocket_Info_t info);
+void Rocket_UpdateStatus_Launched(Rocket_Info_t* info);
+void Rocket_UpdateStatus_AllowDeploy(Rocket_Info_t* info);
+void Rocket_UpdateStatus_ReachedApogee(Rocket_Info_t* info);
+void Rocket_UpdateStatus_DeployTimerElapsed(Rocket_Info_t* info);
+void Rocket_UpdateStatus_ReachedThresholdAlt(Rocket_Info_t* info);
 
-void Rocket_Evaluate_AbleToDeploy_1stStage(Rocket_Info_t info);
-void Rocket_Evaluate_AbleToDeploy_2ndStage(Rocket_Info_t info);
+void Rocket_Evaluate_AbleToDeploy_1stStage(Rocket_Info_t* info);
+void Rocket_Evaluate_AbleToDeploy_2ndStage(Rocket_Info_t* info);
 
-Rocket_Status_t Rocket_isLaunched(Rocket_Info_t info);
-Rocket_Status_t Rocket_isAllowedDeploy(Rocket_Info_t info);
-Rocket_Status_t Rocket_isReachedApogee(Rocket_Info_t info);
-Rocket_Status_t Rocket_isDeployTimerElapsed(Rocket_Info_t info);
-Rocket_Status_t Rocket_isAbleToDeploy_1stStage(Rocket_Info_t info);
-Rocket_Status_t Rocket_isReachedThresholdAlt(Rocket_Info_t info);
-Rocket_Status_t Rocket_isAbleToDeploy_2ndStage(Rocket_Info_t info);
+Rocket_Status_t Rocket_isLaunched(Rocket_Info_t* info);
+Rocket_Status_t Rocket_isAllowedDeploy(Rocket_Info_t* info);
+Rocket_Status_t Rocket_isReachedApogee(Rocket_Info_t* info);
+Rocket_Status_t Rocket_isDeployTimerElapsed(Rocket_Info_t* info);
+Rocket_Status_t Rocket_isAbleToDeploy_1stStage(Rocket_Info_t* info);
+Rocket_Status_t Rocket_isReachedThresholdAlt(Rocket_Info_t* info);
+Rocket_Status_t Rocket_isAbleToDeploy_2ndStage(Rocket_Info_t* info);
 
 
-uint8_t Rocket_ReadStatus(Rocket_Info_t info, Rocket_Status_t selector);
-void Rocket_SetStatus(Rocket_Info_t info, Rocket_Status_t selector);
-void Rocket_ResetStatus(Rocket_Info_t info, Rocket_Status_t selector);
+uint8_t Rocket_ReadStatus(Rocket_Info_t* info, Rocket_Status_t selector);
+void Rocket_SetStatus(Rocket_Info_t* info, Rocket_Status_t selector);
+void Rocket_ResetStatus(Rocket_Info_t* info, Rocket_Status_t selector);
 
-void Rocket_EnvData_ShiftDataSet(Rocket_Info_t info);
-void Rocket_EnvData_AddNewDataSet(Rocket_Info_t info, EnvData_DataSet_t data);
+void Rocket_EnvData_ShiftDataSet(Rocket_Info_t* info);
+void Rocket_EnvData_AddNewDataSet(Rocket_Info_t* info, EnvData_DataSet_t data);
 
 #endif /* ROCKET_H_ */
