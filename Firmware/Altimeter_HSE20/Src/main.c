@@ -755,6 +755,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			//	フラグ更新→打ち上げした
 			Rocket_UpdateStatus_Launched(&rocket_info);
 
+			Rocket_EnvData_SetGroundEnvDataSet(&rocket_info, Rocket_EnvData_GetEnvDataSet(&rocket_info, 3));
+
 			//ログ
 			char buff[32];
 			sprintf(buff, "%lu Launched\r\n", TIM2->CNT);

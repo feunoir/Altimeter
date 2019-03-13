@@ -35,12 +35,12 @@ typedef struct {
 	EnvData_DataSet_t dataset[4];
 	uint8_t rocket_status; // Rocket_Status_téQè∆
 	uint8_t sdwrite_queue;
+	EnvData_DataSet_t ground;
 } Rocket_Info_t;
 
 void Rocket_Init(Rocket_Info_t* info);
 
 void Rocket_InitStatus(Rocket_Info_t* info);
-
 uint8_t Rocket_GetStatus(Rocket_Info_t* info);
 
 uint8_t Rocket_GetQueue(Rocket_Info_t* info);
@@ -73,5 +73,7 @@ void Rocket_ResetStatus(Rocket_Info_t* info, Rocket_Status_t selector);
 
 void Rocket_EnvData_ShiftDataSet(Rocket_Info_t* info);
 void Rocket_EnvData_AddNewDataSet(Rocket_Info_t* info, EnvData_DataSet_t data);
+void Rocket_EnvData_SetGroundEnvDataSet(Rocket_Info_t* info, EnvData_DataSet_t data);
+EnvData_DataSet_t Rocket_EnvData_GetEnvDataSet(Rocket_Info_t* info, uint8_t oldness);
 
 #endif /* ROCKET_H_ */
