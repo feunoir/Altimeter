@@ -73,7 +73,8 @@ void Rocket_ResetStatus(Rocket_Info_t* info, Rocket_Status_t selector);
 
 void Rocket_EnvData_ShiftDataSet(Rocket_Info_t* info);
 void Rocket_EnvData_AddNewDataSet(Rocket_Info_t* info, EnvData_DataSet_t data);
-void Rocket_EnvData_SetGroundEnvDataSet(Rocket_Info_t* info, EnvData_DataSet_t data);
 EnvData_DataSet_t Rocket_EnvData_GetEnvDataSet(Rocket_Info_t* info, uint8_t oldness);
+void Rocket_EnvData_SetGroundEnvDataSet(Rocket_Info_t* info, EnvData_DataSet_t data);
+EnvData_DataSet_t Rocket_EnvData_GetGroundEnvDataSet(Rocket_Info_t* info);
 
 #endif /* ROCKET_H_ */

@@ -153,10 +153,15 @@ void Rocket_EnvData_AddNewDataSet(Rocket_Info_t* info, EnvData_DataSet_t data) {
 	info->dataset[0] = data;
 }
 
-void Rocket_EnvData_SetGroundEnvDataSet(Rocket_Info_t* info, EnvData_DataSet_t data) {
-	info->ground = data;
-}
-
 EnvData_DataSet_t Rocket_EnvData_GetEnvDataSet(Rocket_Info_t* info, uint8_t oldness) {
 	return info->dataset[oldness];
 }
+
+void Rocket_EnvData_SetGroundEnvDataSet(Rocket_Info_t* info, EnvData_DataSet_t data) {
+	info->ground = data;
+}
+EnvData_DataSet_t Rocket_EnvData_GetGroundEnvDataSet(Rocket_Info_t* info) {
+	return info->ground;
+}
+
+
