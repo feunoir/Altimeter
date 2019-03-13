@@ -206,12 +206,12 @@ int main(void)
 
 
 	  Rocket_Evaluate_AbleToDeploy_1stStage(&rocket_info);
-	  if(Rocket_isAbleToDeploy_1stStage(&rocket_info)) {
+	  if(Rocket_isAbleToDeploy_1stStage(&rocket_info) == ROCKET_ABLETODEPLOY_1STSTAGE) {
 		  PIN_H(TRIG_1ST_GPIO_Port, TRIG_1ST_Pin);
 		  PIN_H(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
 
 		  Rocket_Evaluate_AbleToDeploy_2ndStage(&rocket_info);
-		  if(Rocket_isAbleToDeploy_2ndStage(&rocket_info)) {
+		  if(Rocket_isAbleToDeploy_2ndStage(&rocket_info) == ROCKET_ABLETODEPLOY_2NDSTAGE) {
 			  PIN_H(TRIG_2ND_GPIO_Port, TRIG_2ND_Pin);
 			  PIN_H(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin);
 		  } else {
@@ -747,7 +747,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if(GPIO_Pin == LAUNCHDETECT_EXTI_Pin) {
 
 		//	立ち上がり一回のみ検知、チャタリングで複数回割り込みするのを防ぐ
-		if(Rocket_isLaunched(&rocket_info)) {
+		if(Rocket_isLaunched(&rocket_info) == ROCKET_FALSE) {
 			//	フラグ更新→打ち上げした
 			Rocket_UpdateStatus_Launched(&rocket_info);
 
@@ -863,7 +863,7 @@ void Inst_Log_Barometer(Rocket_Info_t* info) {
 	Rocket_EnvData_AddNewDataSet(info, sensdata);
 	Rocket_AddQueue(info);
 
-	if(Rocket_isLaunched(info)) {
+	if(Rocket_isLaunched(info) == ROCKET_LAUNCHED) {
 		//	キューの数だけデータセットから過去のセンシングデータを読み出し、SDに書き込む(32個単位で最大128個)
 		queue = Rocket_GetQueue(info);
 		for(i = 0; i < queue; i++) {
