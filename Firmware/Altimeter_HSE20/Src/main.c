@@ -803,7 +803,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 		isLogBufferEmpty = 0;
 		//バッファに書き込んだときにフラグを立てて、立ってるときはタイマー割り込み時にf_syncする処理を書く
 
-		PIN_H(LED_RED_GPIO_Port, LED_RED_Pin);
+		PIN_L(LED_RED_GPIO_Port, LED_RED_Pin);
 	}
 }
 
