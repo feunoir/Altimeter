@@ -208,15 +208,19 @@ int main(void)
 	  Rocket_Evaluate_AbleToDeploy_1stStage(&rocket_info);
 	  if(Rocket_isAbleToDeploy_1stStage(&rocket_info)) {
 		  PIN_H(TRIG_1ST_GPIO_Port, TRIG_1ST_Pin);
+		  PIN_H(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
 
 		  Rocket_Evaluate_AbleToDeploy_2ndStage(&rocket_info);
 		  if(Rocket_isAbleToDeploy_2ndStage(&rocket_info)) {
 			  PIN_H(TRIG_2ND_GPIO_Port, TRIG_2ND_Pin);
+			  PIN_H(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin);
 		  } else {
 			  PIN_L(TRIG_2ND_GPIO_Port, TRIG_2ND_Pin);
+			  PIN_L(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin);
 		  }
 	  } else {
 		  PIN_L(TRIG_1ST_GPIO_Port, TRIG_1ST_Pin);
+		  PIN_L(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
 	  }
 
 	  //TODO　whileループ内のログの処理どうしよう
@@ -757,6 +761,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			HAL_TIM_Base_Start_IT(&htim15);
 			//	開放ロックタイマースタート
 			HAL_TIM_Base_Start_IT(&htim16);
+			PIN_H(LED_RED_GPIO_Port, LED_RED_Pin);
 		}
 	}
 }
@@ -786,6 +791,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 		f_puts(buff, &file_Sys);
 		isLogBufferEmpty = 0;
 
+		PIN_H(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
 	}
 
 	//開放ロックタイマー
@@ -795,8 +801,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 		sprintf(buff, "%lu AllowDeploy\n", TIM2->CNT);
 		f_puts(buff, &file_Sys);
 		isLogBufferEmpty = 0;
-
 		//バッファに書き込んだときにフラグを立てて、立ってるときはタイマー割り込み時にf_syncする処理を書く
+
+		PIN_H(LED_RED_GPIO_Port, LED_RED_Pin);
 	}
 }
 
