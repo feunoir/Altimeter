@@ -422,7 +422,7 @@ static void MX_TIM15_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim15.Instance = TIM15;
-  htim15.Init.Prescaler = 39;
+  htim15.Init.Prescaler = 39999;
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim15.Init.Period = 32000;
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -775,6 +775,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 		Inst_Log_Barometer(&rocket_info);
 		//Inst_Log_GNSS();
 		//f_sync(&file_GNSS);
+
+		if(Rocket_isReachedApogee(&rocket_info) == ROCKET_FALSE) {
+			Rocket_Evaluate_ReachedApogee(&rocket_info);
+		} else if(Rocket_isReachedThresholdAlt(&rocket_info) == ROCKET_FALSE) {
+			Rocket_Evaluate_ReachedThresholdAlt(&rocket_info);
+		}
+
 
 		//ÉçÉOSDèëÇ´çûÇ›
 		if(!isLogBufferEmpty) {

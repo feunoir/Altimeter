@@ -51,6 +51,9 @@ void Rocket_UpdateStatus_ReachedApogee(Rocket_Info_t* info);
 void Rocket_UpdateStatus_DeployTimerElapsed(Rocket_Info_t* info);
 void Rocket_UpdateStatus_ReachedThresholdAlt(Rocket_Info_t* info);
 
+void Rocket_Evaluate_ReachedApogee(Rocket_Info_t* info);
+void Rocket_Evaluate_ReachedThresholdAlt(Rocket_Info_t* info);
+
 void Rocket_Evaluate_AbleToDeploy_1stStage(Rocket_Info_t* info);
 void Rocket_Evaluate_AbleToDeploy_2ndStage(Rocket_Info_t* info);
 
