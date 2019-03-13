@@ -41,6 +41,8 @@ void Rocket_Init(Rocket_Info_t* info);
 
 void Rocket_InitStatus(Rocket_Info_t* info);
 
+uint8_t Rocket_GetStatus(Rocket_Info_t* info);
+
 uint8_t Rocket_GetQueue(Rocket_Info_t* info);
 void Rocket_ResetQueue(Rocket_Info_t* info);
 void Rocket_AddQueue(Rocket_Info_t* info);
@@ -64,7 +66,6 @@ Rocket_Status_t Rocket_isDeployTimerElapsed(Rocket_Info_t* info);
 Rocket_Status_t Rocket_isAbleToDeploy_1stStage(Rocket_Info_t* info);
 Rocket_Status_t Rocket_isReachedThresholdAlt(Rocket_Info_t* info);
 Rocket_Status_t Rocket_isAbleToDeploy_2ndStage(Rocket_Info_t* info);
-
 
 uint8_t Rocket_ReadStatus(Rocket_Info_t* info, Rocket_Status_t selector);
 void Rocket_SetStatus(Rocket_Info_t* info, Rocket_Status_t selector);

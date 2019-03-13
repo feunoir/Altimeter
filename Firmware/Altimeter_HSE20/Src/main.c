@@ -757,7 +757,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 			//ログ
 			char buff[32];
-			sprintf(buff, "%lu Launched\n", TIM2->CNT);
+			sprintf(buff, "%lu Launched\r\n", TIM2->CNT);
+			xputs(buff);
 			f_puts(buff, &file_Sys);
 			isLogBufferEmpty = 0;
 
@@ -782,6 +783,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 			Rocket_Evaluate_ReachedThresholdAlt(&rocket_info);
 		}
 
+		char buff[32];
+		sprintf(buff, "Status(HEX): %2x\r\n", Rocket_GetStatus(&rocket_info));
+		f_puts(buff, &file_Sys);
+		xputs(buff);
+		isLogBufferEmpty = 0;
 
 		//ログSD書き込み
 		if(!isLogBufferEmpty) {
@@ -798,7 +804,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if(htim->Instance == TIM15) {
 		Rocket_UpdateStatus_DeployTimerElapsed(&rocket_info);
 		char buff[32];
-		sprintf(buff, "%lu DeployTimerElapsed\n", TIM2->CNT);
+		sprintf(buff, "%lu DeployTimerElapsed\r\n", TIM2->CNT);
+		xputs(buff);
 		f_puts(buff, &file_Sys);
 		isLogBufferEmpty = 0;
 
@@ -809,7 +816,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if(htim->Instance == TIM16) {
 		Rocket_UpdateStatus_AllowDeploy(&rocket_info);
 		char buff[32];
-		sprintf(buff, "%lu AllowDeploy\n", TIM2->CNT);
+		sprintf(buff, "%lu AllowDeploy\r\n", TIM2->CNT);
+		xputs(buff);
 		f_puts(buff, &file_Sys);
 		isLogBufferEmpty = 0;
 		//バッファに書き込んだときにフラグを立てて、立ってるときはタイマー割り込み時にf_syncする処理を書く
@@ -897,6 +905,7 @@ void Inst_Log_Barometer(Rocket_Info_t* info) {
 	} else {
 		//ひたすらなにもせずqueueをためる
 	}
+	xprintf("Queue: %d\r\n", Rocket_GetQueue(info));
 }
 /*void Inst_Log_GNSS(void) {
 	char c[1];

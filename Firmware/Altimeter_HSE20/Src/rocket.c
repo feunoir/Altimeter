@@ -15,6 +15,10 @@ void Rocket_InitStatus(Rocket_Info_t* info) {
 	info->rocket_status = 0x00;
 }
 
+uint8_t Rocket_GetStatus(Rocket_Info_t* info) {
+	return info->rocket_status;
+}
+
 uint8_t Rocket_GetQueue(Rocket_Info_t* info) {
 	return info->sdwrite_queue;
 }
