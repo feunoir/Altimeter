@@ -86,6 +86,8 @@ char logdir_Baro[20] = "BAROLOG.CSV";
 //char logdir_GNSS[20] = "GNSSLOG.CSV";
 
 LPS22HB_t lps22hb;
+
+uint8_t isLogBufferEmpty = 1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -189,6 +191,8 @@ int main(void)
 
   System_Init();
 
+  //char buff[32];
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -214,6 +218,9 @@ int main(void)
 	  } else {
 		  PIN_L(TRIG_1ST_GPIO_Port, TRIG_1ST_Pin);
 	  }
+
+	  //TODO　whileループ内のログの処理どうしよう
+	  //→判定関数内でやればよいのでは
   }
   /* USER CODE END 3 */
 
@@ -596,6 +603,19 @@ void System_Init(void) {
 	//	Configure log file directory
 	System_Config_FileDirectory();
 
+	//	open file for systemlog
+	fRes = f_open(&file_Sys, logdir_Sys, FA_OPEN_APPEND | FA_WRITE);
+	if(fRes == FR_OK) {
+		//	ok
+		LED_Flash_OnePulse(LED_GREEN_GPIO_Port, LED_GREEN_Pin, 500);
+		xprintf("[FatFs] syslog fopen succees\r\n");
+	} else {
+		//	fail → reset
+		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
+		xprintf("[FatFs] syslog fopen failure\r\n");
+		NVIC_SystemReset();
+	}
+
 	//	open file for baro/temp logging
 	fRes = f_open(&file_Baro, logdir_Baro, FA_OPEN_APPEND | FA_WRITE);
 	if(fRes == FR_OK) {
@@ -721,16 +741,23 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 	//	打ち上げ検知時動作
 	if(GPIO_Pin == LAUNCHDETECT_EXTI_Pin) {
-		//	フラグ更新→打ち上げした
-		Rocket_UpdateStatus_Launched(&rocket_info);
 
-		// TODO launchedフラグ更新した時刻を記録する処理
+		//	立ち上がり一回のみ検知、チャタリングで複数回割り込みするのを防ぐ
+		if(Rocket_isLaunched(&rocket_info)) {
+			//	フラグ更新→打ち上げした
+			Rocket_UpdateStatus_Launched(&rocket_info);
 
+			//ログ
+			char buff[32];
+			sprintf(buff, "%lu Launched\n", TIM2->CNT);
+			f_puts(buff, &file_Sys);
+			isLogBufferEmpty = 0;
 
-		//	開放タイマースタート
-		HAL_TIM_Base_Start_IT(&htim15);
-		//	開放ロックタイマースタート
-		HAL_TIM_Base_Start_IT(&htim16);
+			//	開放タイマースタート
+			HAL_TIM_Base_Start_IT(&htim15);
+			//	開放ロックタイマースタート
+			HAL_TIM_Base_Start_IT(&htim16);
+		}
 	}
 }
 
@@ -739,6 +766,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 		Inst_Log_Barometer(&rocket_info);
 		//Inst_Log_GNSS();
 		//f_sync(&file_GNSS);
+
+		//ログSD書き込み
+		if(!isLogBufferEmpty) {
+			f_sync(&file_Sys);
+			isLogBufferEmpty = 1;
+		}
 	}
 	/*
 	if(htim->Instance == TIM7) {
@@ -748,13 +781,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	//開放タイマー
 	if(htim->Instance == TIM15) {
 		Rocket_UpdateStatus_DeployTimerElapsed(&rocket_info);
-		// TODO deploytimerelapsedフラグ更新した時刻を記録する処理
+		char buff[32];
+		sprintf(buff, "%lu DeployTimerElapsed\n", TIM2->CNT);
+		f_puts(buff, &file_Sys);
+		isLogBufferEmpty = 0;
+
 	}
 
 	//開放ロックタイマー
 	if(htim->Instance == TIM16) {
 		Rocket_UpdateStatus_AllowDeploy(&rocket_info);
-		// TODO allowdeployフラグ更新した時刻を記録する処理
+		char buff[32];
+		sprintf(buff, "%lu AllowDeploy\n", TIM2->CNT);
+		f_puts(buff, &file_Sys);
+		isLogBufferEmpty = 0;
+
+		//バッファに書き込んだときにフラグを立てて、立ってるときはタイマー割り込み時にf_syncする処理を書く
 	}
 }
 
@@ -813,9 +855,6 @@ void Inst_Log_Barometer(Rocket_Info_t* info) {
 	Rocket_EnvData_ShiftDataSet(info);
 	Rocket_EnvData_AddNewDataSet(info, sensdata);
 	Rocket_AddQueue(info);
-
-	// TODO ここにキューの数だけSDに書き込む&キューをリセットする処理追加
-	// TODO isLaunchedがtrueならSD記録、falseなら記録せず
 
 	if(Rocket_isLaunched(info)) {
 		//	キューの数だけデータセットから過去のセンシングデータを読み出し、SDに書き込む(32個単位で最大128個)
