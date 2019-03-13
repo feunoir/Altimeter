@@ -57,7 +57,7 @@ void Rocket_UpdateStatus_ReachedThresholdAlt(Rocket_Info_t* info) {
 
 //	niwa
 void Rocket_Evaluate_ReachedApogee(Rocket_Info_t* info){
-	double sum = 0,old_sum=0;
+	float sum = 0,old_sum=0;
 	float average, old_average;
 	for(uint8_t i=0;i<32;i++){
 		sum += info->dataset[0].envdata[i].press/4096.0;
@@ -69,9 +69,16 @@ void Rocket_Evaluate_ReachedApogee(Rocket_Info_t* info){
 		Rocket_UpdateStatus_ReachedApogee(info);
 	}
 }
-
 void Rocket_Evaluate_ReachedThresholdAlt(Rocket_Info_t* info){
-	if((1010.0-info->dataset[0].envdata[0].press/4096.0)*8.28 < 200.0){
+	float sum = 0;
+	float ground_press;
+	float height;
+	for(uint8_t i=0;i<32;i++){
+		sum += info->ground.envdata[i].press/4096.0;
+	}
+	ground_press = sum/32.0;
+	height = (ground_press - info->dataset[0].envdata[31].press/4096.0)*8.28;
+	if(height < 200.0){
 		Rocket_UpdateStatus_ReachedThresholdAlt(info);
 	}
 }

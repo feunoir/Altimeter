@@ -660,6 +660,7 @@ void System_Init(void) {
 	msgrx_init(&huart1);
 
 	//	start interrupt timer for reading barometer
+	__HAL_TIM_CLEAR_FLAG(&htim6, TIM_FLAG_UPDATE);
 	HAL_TIM_Base_Start_IT(&htim6);
 	//	for only gnss (not for use now)
 	//HAL_TIM_Base_Start_IT(&htim7);
@@ -765,8 +766,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			isLogBufferEmpty = 0;
 
 			//	開放タイマースタート
+			__HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
 			HAL_TIM_Base_Start_IT(&htim15);
 			//	開放ロックタイマースタート
+			__HAL_TIM_CLEAR_FLAG(&htim16, TIM_FLAG_UPDATE);
 			HAL_TIM_Base_Start_IT(&htim16);
 			PIN_H(LED_RED_GPIO_Port, LED_RED_Pin);
 		}
