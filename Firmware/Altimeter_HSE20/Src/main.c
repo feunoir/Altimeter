@@ -760,7 +760,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 			//ログ
 			char buff[32];
-			sprintf(buff, "%lu Launched\r\n", TIM2->CNT);
+			sprintf(buff, "%lu [flag] Launched\r\n", TIM2->CNT);
 			xputs(buff);
 			f_puts(buff, &file_Sys);
 			isLogBufferEmpty = 0;
@@ -778,18 +778,31 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if(htim->Instance == TIM6) {
+		char buff[64];
+
 		Inst_Log_Barometer(&rocket_info);
 		//Inst_Log_GNSS();
 		//f_sync(&file_GNSS);
 
 		if(Rocket_isReachedApogee(&rocket_info) == ROCKET_FALSE) {
 			Rocket_Evaluate_ReachedApogee(&rocket_info);
+			if(Rocket_isReachedApogee(&rocket_info) == ROCKET_REACHEDAPOGEE) {
+				sprintf(buff, "%lu [flag] ReachedApogee\r\n", TIM2->CNT);
+				f_puts(buff, &file_Sys);
+				xputs(buff);
+				isLogBufferEmpty = 0;
+			}
 		} else if(Rocket_isReachedThresholdAlt(&rocket_info) == ROCKET_FALSE) {
 			Rocket_Evaluate_ReachedThresholdAlt(&rocket_info);
+			if(Rocket_isReachedThresholdAlt(&rocket_info) == ROCKET_REACHEDTHRESHOLDALT) {
+				sprintf(buff, "%lu [flag] ReachedThresholdAlt", TIM2->CNT);
+				f_puts(buff, &file_Sys);
+				xputs(buff);
+				isLogBufferEmpty = 0;
+			}
 		}
 
-		char buff[32];
-		sprintf(buff, "Status(HEX): %2x\r\n", Rocket_GetStatus(&rocket_info));
+		sprintf(buff, "%lu [Stat] %2x\r\n", TIM2->CNT, Rocket_GetStatus(&rocket_info));
 		f_puts(buff, &file_Sys);
 		xputs(buff);
 		isLogBufferEmpty = 0;
@@ -808,8 +821,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	//開放タイマー
 	if(htim->Instance == TIM15) {
 		Rocket_UpdateStatus_DeployTimerElapsed(&rocket_info);
-		char buff[32];
-		sprintf(buff, "%lu DeployTimerElapsed\r\n", TIM2->CNT);
+		char buff[64];
+		sprintf(buff, "%lu [flag] DeployTimerElapsed\r\n", TIM2->CNT);
 		xputs(buff);
 		f_puts(buff, &file_Sys);
 		isLogBufferEmpty = 0;
@@ -820,8 +833,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	//開放ロックタイマー
 	if(htim->Instance == TIM16) {
 		Rocket_UpdateStatus_AllowDeploy(&rocket_info);
-		char buff[32];
-		sprintf(buff, "%lu AllowDeploy\r\n", TIM2->CNT);
+		char buff[64];
+		sprintf(buff, "%lu [flag] AllowDeploy\r\n", TIM2->CNT);
 		xputs(buff);
 		f_puts(buff, &file_Sys);
 		isLogBufferEmpty = 0;
