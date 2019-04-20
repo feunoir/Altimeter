@@ -75,7 +75,8 @@ void Error_Handler(void);
 #define GNSS_RX_Pin GPIO_PIN_7
 #define GNSS_RX_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
-
+#define PIN_H(x,y) HAL_GPIO_WritePin(x,y,GPIO_PIN_SET)
+#define PIN_L(x,y) HAL_GPIO_WritePin(x,y,GPIO_PIN_RESET)
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

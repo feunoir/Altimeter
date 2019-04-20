@@ -14,8 +14,8 @@
 
 //  LPS22HB Address
 //  7bit address = 0b101110x(0x5c or 0x5d depends on SA0/SDO)
-//#define LPS22HB_G_CHIP_ADDR  (0x5c << 1)    // SA0(=SDO pin) = Ground
-//#define LPS22HB_V_CHIP_ADDR  (0x5d << 1)    // SA0(=SDO pin) = Vdd
+#define LPS22HB_G_CHIP_ADDR  (0x5c << 1)    // SA0(=SDO pin) = Ground
+#define LPS22HB_V_CHIP_ADDR  (0x5d << 1)    // SA0(=SDO pin) = Vdd
 
 //   LPS22HB ID
 #define I_AM_LPS22HB            0xb1
