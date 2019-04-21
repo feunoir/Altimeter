@@ -133,7 +133,7 @@ LPS22HB_RESULT_t LPS22HB_Set_DRDY(LPS22HB_t* LPS22HB, LPS22HB_DRDY_t drdy)
 	HAL_StatusTypeDef res[3];
 	uint8_t dt[2];
 
-	dt[0] = LPS22HB_CTRL_REG1;
+	dt[0] = LPS22HB_CTRL_REG3;
 	res[0] = HAL_I2C_Master_Transmit(LPS22HB->hi2c, LPS22HB->address, dt, 1, 0xFFFF);
 	res[1] = HAL_I2C_Master_Receive(LPS22HB->hi2c, LPS22HB->address, dt, 1, 0xFFFF);
 
@@ -141,7 +141,7 @@ LPS22HB_RESULT_t LPS22HB_Set_DRDY(LPS22HB_t* LPS22HB, LPS22HB_DRDY_t drdy)
 	dt[1] &= 0xff ^ 0x04;
 	dt[1] |= drdy;
 
-	dt[0] = LPS22HB_CTRL_REG1;
+	dt[0] = LPS22HB_CTRL_REG3;
 	res[2] = HAL_I2C_Master_Transmit(LPS22HB->hi2c, LPS22HB->address, dt, 2, 0xFFFF);
 
 	if( res[0] != HAL_OK || res[1] != HAL_OK || res[2] != HAL_OK ) {

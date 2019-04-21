@@ -24,14 +24,20 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 #include "LPS22HB.h"
 #include "uart_rx_dma.h"
 #include "../uart_wrapper/uart_wrapper.h"
-
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef struct {
+	uint32_t tim;
+	uint32_t baro;
+	int16_t temp;
+} EnvData_Container_t;
 
 /* USER CODE END PTD */
 
@@ -59,6 +65,19 @@ DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
+FATFS fatfs;
+FIL fileSys;
+FIL fileEnv;
+//FIL file_GNSS;
+
+char logdir_Sys[20] = "SYSLOG.TXT";
+char logdir_Baro[20] = "BAROLOG.CSV";
+//char logdir_GNSS[20] = "GNSSLOG.CSV";
+
+LPS22HB_t lps22hb;
+EnvData_Container_t envdata;
+__IO ITStatus isEnvDataReady = RESET;
+
 
 /* USER CODE END PV */
 
@@ -73,6 +92,10 @@ static void MX_TIM6_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void System_Init(void);
+void System_Config_FileDirectory(void);
+int System_Get_BootCount(void);
+void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms);
 
 /* USER CODE END PFP */
 
@@ -88,7 +111,8 @@ static void MX_USART2_UART_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  char buff[64];
+  uint32_t timA, timB, timC;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -119,15 +143,41 @@ int main(void)
   MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
 
+  HAL_NVIC_DisableIRQ(EXTI3_IRQn);
+  System_Init();
+  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    if(isEnvDataReady == SET) {
+    	timA = TIM2->CNT;
+		isEnvDataReady = RESET;
+
+		HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+
+		LPS22HB_Update_Data(&lps22hb);
+		envdata.baro = LPS22HB_Get_PressureRaw(&lps22hb);
+		envdata.temp = LPS22HB_Get_TemperatureRaw(&lps22hb);
+
+		sprintf(buff, "%lu,%lu,%d\r\n", envdata.tim, envdata.baro, envdata.temp);
+		f_puts(buff, &fileEnv);
+		xputs(buff);
+		timB = TIM2->CNT;	//　	about 0.7ms from timA, sometimes 3ms
+		f_sync(&fileEnv);
+		timC = TIM2->CNT;	//	about 6.5ms from timA, sometimes 20ms
+
+
+		xprintf("process time: %lu %lu\r\n", timB-timA, timC-timA);
+    }
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
   }
   /* USER CODE END 3 */
 }
@@ -148,8 +198,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 1;
-  RCC_OscInitStruct.PLL.PLLN = 10;
+  RCC_OscInitStruct.PLL.PLLM = 5;
+  RCC_OscInitStruct.PLL.PLLN = 40;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV7;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
@@ -177,10 +227,10 @@ void SystemClock_Config(void)
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_PCLK1;
   PeriphClkInit.Sdmmc1ClockSelection = RCC_SDMMC1CLKSOURCE_PLLSAI1;
   PeriphClkInit.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_HSE;
-  PeriphClkInit.PLLSAI1.PLLSAI1M = 1;
-  PeriphClkInit.PLLSAI1.PLLSAI1N = 12;
+  PeriphClkInit.PLLSAI1.PLLSAI1M = 5;
+  PeriphClkInit.PLLSAI1.PLLSAI1N = 24;
   PeriphClkInit.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
-  PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV4;
+  PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
   PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV2;
   PeriphClkInit.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_48M2CLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -466,11 +516,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB3 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3;
+  /*Configure GPIO pin : LPS22HB_DRDY_Pin */
+  GPIO_InitStruct.Pin = LPS22HB_DRDY_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(LPS22HB_DRDY_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI3_IRQn, 0, 0);
@@ -479,7 +529,178 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void System_Init(void) {
+	FRESULT fRes;
 
+	//	start timer for time record
+	HAL_TIM_Base_Start(&htim2);
+
+	uart_init(&huart2);
+
+	//	initialize LPS22HB
+	LPS22HB_Set_Handle(&lps22hb, &hi2c1);
+	LPS22HB_Set_Address(&lps22hb, LPS22HB_ADDR_L);
+	LPS22HB_Init(&lps22hb, LPS22HB_ODR_1HZ);
+	LPS22HB_Set_FIFO(&lps22hb, LPS22HB_FIFO_DISABLE, LPS22HB_FIFOMODE_BYPASS);
+	LPS22HB_Set_DRDY(&lps22hb, LPS22HB_DRDY_ENABLE);
+
+	LPS22HB_Update_Data(&lps22hb);
+
+	//	mount sd card
+	fRes = f_mount(&fatfs, SDPath, 1);
+	if(fRes == FR_OK) {
+		//	ok
+		LED_Flash_OnePulse(LED_BLUE_GPIO_Port, LED_BLUE_Pin, 500);
+		xprintf("[FatFs] mount succees\r\n");
+	} else {
+		//	fail → reset
+		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
+		xprintf("[FatFs] mount failure\r\n");
+		NVIC_SystemReset();
+	}
+
+	//	Configure log file directory
+	System_Config_FileDirectory();
+
+	//	open file for systemlog
+	fRes = f_open(&fileSys, logdir_Sys, FA_OPEN_APPEND | FA_WRITE);
+	if(fRes == FR_OK) {
+		//	ok
+		LED_Flash_OnePulse(LED_GREEN_GPIO_Port, LED_GREEN_Pin, 500);
+		xprintf("[FatFs] syslog fopen succees\r\n");
+	} else {
+		//	fail → reset
+		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
+		xprintf("[FatFs] syslog fopen failure\r\n");
+		NVIC_SystemReset();
+	}
+
+	//	open file for baro/temp logging
+	fRes = f_open(&fileEnv, logdir_Baro, FA_OPEN_APPEND | FA_WRITE);
+	if(fRes == FR_OK) {
+		//	ok
+		LED_Flash_OnePulse(LED_GREEN_GPIO_Port, LED_GREEN_Pin, 500);
+		xprintf("[FatFs] baro fopen succees\r\n");
+	} else {
+		//	fail → reset
+		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
+		xprintf("[FatFs] baro fopen failure\r\n");
+		NVIC_SystemReset();
+	}
+
+	/*/	open file for gnss logging
+	fRes = f_open(&file_GNSS, logdir_GNSS, FA_OPEN_APPEND | FA_WRITE);
+	if(fRes == FR_OK) {
+		//	ok
+		LED_Flash_OnePulse(LED_GREEN_GPIO_Port, LED_GREEN_Pin, 500);
+		xprintf("[FatFs] gnss fopen succees\r\n");
+	} else {
+		//	fail → reset
+		LED_Flash_OnePulse(LED_RED_GPIO_Port, LED_RED_Pin, 500);
+		xprintf("[FatFs] gnss fopen failure\r\n");
+		NVIC_SystemReset();
+	}*/
+
+	/* These uart interrupts halt any ongoing transfer if an error occurs, disable them */
+	/* Disable the UART Parity Error Interrupt */
+	__HAL_UART_DISABLE_IT(&huart1, UART_IT_PE);
+	/* Disable the UART Error Interrupt: (Frame error, noise error, overrun error) */
+	__HAL_UART_DISABLE_IT(&huart1, UART_IT_ERR);
+
+	//	uart rx dma config
+	msgrx_init(&huart1);
+
+	//	start interrupt timer for reading barometer
+	//__HAL_TIM_CLEAR_FLAG(&htim6, TIM_FLAG_UPDATE);
+	//HAL_TIM_Base_Start_IT(&htim6);
+	//	for only gnss (not for use now)
+	//HAL_TIM_Base_Start_IT(&htim7);
+
+}
+
+void System_Config_FileDirectory(void)
+{
+	int bootcount;
+	char logdir[8];
+
+	bootcount = System_Get_BootCount();
+	if ( bootcount < 0 ) {
+		xprintf("[LogSys]bootcount check failure!\r\n");
+
+		sprintf(logdir, "LOG");
+		xprintf("[LogSys]log directory was set to \"LOG\" \r\n");
+	} else {
+		xprintf("[LogSys]bootcount is %d\r\n", bootcount);
+
+		sprintf(logdir, "LOG_%03d", bootcount);
+		xprintf("[LogSys]log directory was set to \"LOG_%03d\"\r\n", bootcount);
+	}
+
+	f_mkdir(logdir);
+
+	sprintf(logdir_Sys, "LOG_%03d/SYSLOG.TXT", bootcount);
+	sprintf(logdir_Baro, "LOG_%03d/BAROLOG.CSV", bootcount);
+	//sprintf(logdir_GNSS, "LOG_%03d/GNSSLOG.CSV", bootcount);
+}
+
+/**
+ * 	Check system boot count from config file in sdcard
+ */
+int System_Get_BootCount(void)
+{
+    FIL fileRead;
+    FIL fileWrite;
+    FRESULT res;
+
+    char buff[3] = {};
+    int bootcount = 0;
+
+    res = f_open(&fileRead, "CONFIG/BOOTCNT.TXT", FA_READ );
+    if ( FR_OK != res ) {
+    	//	nothing file
+    	res = f_mkdir("CONFIG");
+    	if ( FR_OK == res || FR_EXIST == res ) {
+        	//	completed make the directory or exist
+        	res = f_open(&fileWrite, "CONFIG/BOOTCNT.TXT", FA_CREATE_ALWAYS | FA_WRITE );
+        	if ( FR_OK != res ) {
+        		//	failed to make file
+        		xprintf("filesystem error!\r\n");
+            	return -1;
+        	} else {
+        		//	succeed to make file
+        		f_printf(&fileWrite, "%d", bootcount);  //  bootcount = 0
+        	}
+        }
+    } else {
+    	//	"BOOTCNT.TXT" file exist
+        f_gets((TCHAR *)buff, 4	, &fileRead);
+        bootcount = atoi(buff);
+        bootcount++;
+
+        f_close(&fileRead);
+
+        res = f_open(&fileWrite, "CONFIG/BOOTCNT.TXT", FA_CREATE_ALWAYS | FA_WRITE );
+    }
+
+    f_printf(&fileWrite, "%d", bootcount);
+    f_close(&fileWrite);
+
+    return bootcount;
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if(GPIO_Pin == LPS22HB_DRDY_Pin) {
+		// TODO: TIM2を読むコード+LPS22HBから気圧を取得する？
+		envdata.tim = TIM2->CNT;
+		isEnvDataReady = SET;
+	}
+}
+
+void LED_Flash_OnePulse(GPIO_TypeDef* port, uint16_t pin, uint16_t span_ms) {
+	HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
+	HAL_Delay(span_ms);
+	HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
+}
 /* USER CODE END 4 */
 
 /**
